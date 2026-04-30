@@ -253,9 +253,9 @@ html, body { background: var(--bg); color: var(--text); font-family: var(--sans)
     <div class="card">
       <div class="card-title">dB ↔ Voltage & Power Gain</div>
       <div class="grid3">
-        <div class="field"><label>dB</label><input type="number" id="s1_db" step="any" oninput="db_fromDB()"></div>
-        <div class="field"><label>Voltage gain</label><input type="number" id="s1_vg" step="any" oninput="db_fromVG()"></div>
-        <div class="field"><label>Power gain</label><input type="number" id="s1_pg" step="any" oninput="db_fromPG()"></div>
+        <div class="field"><label>dB</label><input type="text" inputmode="decimal" id="s1_db" step="any" oninput="db_fromDB()"></div>
+        <div class="field"><label>Voltage gain</label><input type="text" inputmode="decimal" id="s1_vg" step="any" oninput="db_fromVG()"></div>
+        <div class="field"><label>Power gain</label><input type="text" inputmode="decimal" id="s1_pg" step="any" oninput="db_fromPG()"></div>
       </div>
       <div class="formula">dB = 20·log(V₁/V₂) = 10·log(P₁/P₂)</div>
     </div>
@@ -264,12 +264,12 @@ html, body { background: var(--bg); color: var(--text); font-family: var(--sans)
       <div class="card-title">dBm / Watt → Voltage & Current</div>
       <div class="load-row">
         <label>Load resistance</label>
-        <input type="number" id="s2_load" value="50" step="any" oninput="db_recalcPwr()" class="standalone-input">
+        <input type="text" inputmode="decimal" id="s2_load" value="50" step="any" oninput="db_recalcPwr()" class="standalone-input">
         <span class="unit">Ω</span>
       </div>
       <div class="grid2">
-        <div class="field"><label>dBm</label><input type="number" id="s2_dbm" step="any" oninput="db_fromDBM()"></div>
-        <div class="field"><label>Watt</label><input type="number" id="s2_w" step="any" oninput="db_fromW()"></div>
+        <div class="field"><label>dBm</label><input type="text" inputmode="decimal" id="s2_dbm" step="any" oninput="db_fromDBM()"></div>
+        <div class="field"><label>Watt</label><input type="text" inputmode="decimal" id="s2_w" step="any" oninput="db_fromW()"></div>
       </div>
       <div class="result-grid">
         <div class="result-card"><div class="rc-label">RMS voltage</div><div class="rc-val"><span id="r_vdc">—</span><span class="rc-unit">V</span></div></div>
