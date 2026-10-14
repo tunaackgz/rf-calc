@@ -421,6 +421,40 @@ def('wl',{title:'Wavelength',desc:'λ, λ/2, λ/4 from frequency or period',cat:
     return true;
   }});
 
+/* ---------- 4b. Unit converter ---------- */
+const LEN_U=[['uc_mil','Mil, thousandth of an inch','mil',25.4e-6],['uc_in','Inch','in',0.0254],['uc_um','Micrometre','µm',1e-6],['uc_mm','Millimetre','mm',1e-3],['uc_cm','Centimetre','cm',1e-2],['uc_m','Metre','m',1]];
+const CU_UM=34.79;
+def('uc',{title:'Unit Converter',desc:'mil, inch, µm, mm, cm, m and copper weight',cat:'conv',badge:'in',
+  body: card('Length', rows(...LEN_U.map(u=>row('',u[1],u[0],{unit:u[2]}))))
+    + card('Copper thickness', rows(
+      row('','Copper weight','uc_oz',{unit:'oz'}),
+      row('','Thickness','uc_cum',{unit:'µm'}),
+      row('','Thickness','uc_cmil',{unit:'mil'}))),
+  fx:'1 in = 1000 mil = 25.4 mm<br>1 mil = 25.4 µm<br>1 oz/ft² copper ≈ 34.79 µm ≈ 1.37 mil',
+  calc(){
+    let did=false;
+    const g1=LEN_U.map(u=>u[0]), s1=lastEd('uc',g1);
+    if(s1){
+      if(!has(s1)){ wipe(g1); did=true; }
+      else{
+        const v=num(s1); if(!isFinite(v)) return 'Enter a valid number.';
+        const m=v*LEN_U.find(u=>u[0]===s1)[3], map={};
+        LEN_U.forEach(u=>{ map[u[0]]=m/u[3]; });
+        putX(s1,map); did=true;
+      }
+    }
+    const g2=['uc_oz','uc_cum','uc_cmil'], s2=lastEd('uc',g2);
+    if(s2){
+      if(!has(s2)){ wipe(g2); did=true; }
+      else{
+        const v=num(s2); if(!isFinite(v)) return 'Enter a valid number.';
+        const um=s2==='uc_oz'?v*CU_UM:s2==='uc_cum'?v:v*25.4;
+        putX(s2,{uc_oz:um/CU_UM,uc_cum:um,uc_cmil:um/25.4}); did=true;
+      }
+    }
+    return did||'Enter a value to convert.';
+  }});
+
 /* ---------- 5. Transmission line ---------- */
 const TL={type:'ms',unit:0};
 const DIM=[['mm',1e-3],['mil',25.4e-6],['µm',1e-6]];
