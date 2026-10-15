@@ -114,12 +114,14 @@ input.out{background:var(--well);border-color:var(--line);cursor:default}
 .note{font-size:12.5px;color:var(--muted);padding:6px 0 2px}
 
 /* cascade */
-.st{display:grid;grid-template-columns:22px 1fr 1fr 1fr 30px;gap:6px;align-items:center;padding:5px 0}
-.sth{font-size:11.5px;color:var(--muted);font-weight:600;text-align:right;padding-bottom:0}
-.sth div:first-child{text-align:left}
-.sn{font:600 12px var(--mono);color:var(--muted)}
+.st{border:1px solid var(--line);border-radius:10px;padding:6px 10px 10px;margin:8px 0;background:#fff}
+.sth{display:flex;justify-content:space-between;align-items:center}
+.sn{font-size:12.5px;font-weight:650;color:var(--ink)}
+.sg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.sg span{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
 .st input.num{height:38px;font-size:13.5px;padding:0 8px}
 @media (pointer:coarse){.st .iw.sg input.num{padding-left:38px}}
+@media (max-width:520px){.sg{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .sx{width:30px;height:30px;border:0;border-radius:7px;background:none;color:var(--faint);font-size:19px;cursor:pointer}
 .sx:hover{background:var(--well);color:var(--red)}
 .add{width:100%;height:38px;margin:6px 0 4px;border:1.5px dashed var(--line2);border-radius:9px;background:none;color:var(--trace-ink);font-size:13px;font-weight:600;cursor:pointer}
@@ -681,20 +683,23 @@ def('lc',{title:'LC Resonance',desc:'Solve L, C or f₀ from the other two',cat:
 
 /* ---------- 9. Cascade ---------- */
 const CS={seq:0};
-function stageHTML(){ const id=++CS.seq; return `<div class="st" data-sid="${id}"><div class="sn"></div>${iw('cs_g_'+id,{signed:1})}${iw('cs_nf_'+id)}${iw('cs_ip_'+id,{signed:1})}<button type="button" class="sx" aria-label="Remove stage">×</button></div>`; }
-function csNum(){ document.querySelectorAll('#cs_stages .st[data-sid] .sn').forEach((e,i)=>e.textContent=i+1); }
+const fld=(lab,html)=>`<div><span>${lab}</span>${html}</div>`;
+function stageHTML(){ const id=++CS.seq; return `<div class="st" data-sid="${id}"><div class="sth"><div class="sn"></div><button type="button" class="sx" aria-label="Remove stage">×</button></div><div class="sg">${fld('Gain, dB',iw('cs_g_'+id,{signed:1}))}${fld('NF, dB',iw('cs_nf_'+id))}${fld('OIP3, dBm',iw('cs_ip_'+id,{signed:1}))}${fld('IP1dB, dBm',iw('cs_p1_'+id,{signed:1}))}</div></div>`; }
+function csNum(){ document.querySelectorAll('#cs_stages .st[data-sid] .sn').forEach((e,i)=>e.textContent='Stage '+(i+1)); }
 function csAdd(){ $('cs_stages').insertAdjacentHTML('beforeend',stageHTML()); csNum(); }
 function csReset(){ document.querySelectorAll('#cs_stages .st[data-sid]').forEach(e=>e.remove()); for(let i=0;i<3;i++) csAdd(); }
 def('cs',{title:'Cascade Analysis',desc:'Chain gain, noise figure and IP3',cat:'sys',badge:'Σ',
   body: card('Stages, input to output',
-      `<div id="cs_stages"><div class="st sth"><div>#</div><div>Gain, dB</div><div>NF, dB</div><div>OIP3, dBm</div><div></div></div></div><button type="button" class="add" id="cs_add">Add stage</button><p class="note">Leave OIP3 empty for passive stages.</p>`)
+      `<div id="cs_stages"></div><button type="button" class="add" id="cs_add">Add stage</button><p class="note">OIP3 and IP1dB are optional. Leave them empty for passive stages.</p>`)
     + card('Cascade', rows(
       row('<i>G</i>','Total gain','cs_G',{out:1,unit:'dB'}),
       row('NF','Noise figure','cs_NF',{out:1,unit:'dB'}),
       row('<i>T</i><sub>e</sub>','Noise temperature','cs_Te',{out:1,unit:'K'}),
       row('OIP3','Output IP3','cs_oip3',{out:1,unit:'dBm'}),
-      row('IIP3','Input IP3','cs_iip3',{out:1,unit:'dBm'}))),
-  fx:'F = F₁ + (F₂ − 1)/G₁ + (F₃ − 1)/(G₁G₂) + …<br>1/OIP3 = Σ 1/(OIP3ᵢ·Gᵢ₊₁·…·G<sub>N</sub>)<br>IIP3 = OIP3 − G, T<sub>e</sub> = 290·(F − 1)',
+      row('IIP3','Input IP3','cs_iip3',{out:1,unit:'dBm'}))
+    + rows(row('IP1dB','Input P1dB','cs_ip1',{out:1,unit:'dBm'}),
+      row('OP1dB','Output P1dB','cs_op1',{out:1,unit:'dBm'}))),
+  fx:'F = F₁ + (F₂ − 1)/G₁ + (F₃ − 1)/(G₁G₂) + …<br>1/OIP3 = Σ 1/(OIP3ᵢ·Gᵢ₊₁·…·G<sub>N</sub>)<br>IIP3 = OIP3 − G, T<sub>e</sub> = 290·(F − 1)<br>1/IP1dB = Σ (G₁·…·Gᵢ₋₁)/IP1dBᵢ<br>OP1dB = IP1dB + G − 1 dB',
   init(){
     csReset();
     $('cs_add').addEventListener('click',csAdd);
@@ -710,13 +715,14 @@ def('cs',{title:'Cascade Analysis',desc:'Chain gain, noise figure and IP3',cat:'
   calc(){
     const st=[]; let n=0;
     for(const r of document.querySelectorAll('#cs_stages .st[data-sid]')){
-      n++; const id=r.dataset.sid, gi='cs_g_'+id, ni='cs_nf_'+id, pi='cs_ip_'+id;
-      if(!has(gi)&&!has(ni)&&!has(pi)) continue;
+      n++; const id=r.dataset.sid, gi='cs_g_'+id, ni='cs_nf_'+id, pi='cs_ip_'+id, qi='cs_p1_'+id;
+      if(!has(gi)&&!has(ni)&&!has(pi)&&!has(qi)) continue;
       const g=num(gi), nf=num(ni);
       if(!isFinite(g)||!isFinite(nf)) return `Stage ${n}: enter both gain and noise figure.`;
       if(nf<0) return `Stage ${n}: noise figure must be 0 dB or greater.`;
       let ip=null; if(has(pi)){ ip=num(pi); if(!isFinite(ip)) return `Stage ${n}: enter a valid OIP3.`; }
-      st.push({g,nf,ip});
+      let p1=null; if(has(qi)){ p1=num(qi); if(!isFinite(p1)) return `Stage ${n}: enter a valid IP1dB.`; }
+      st.push({g,nf,ip,p1});
     }
     if(!st.length) return 'Enter at least one stage.';
     let F=0, Gl=1, Gdb=0;
@@ -725,6 +731,9 @@ def('cs',{title:'Cascade Analysis',desc:'Chain gain, noise figure and IP3',cat:'
     let inv=0, any=false;
     st.forEach((s,i)=>{ if(s.ip===null) return; any=true; let ga=1; for(let j=i+1;j<st.length;j++) ga*=10**(st[j].g/10); inv+=1/(10**(s.ip/10)*ga); });
     if(any){ const o=10*LOG10(1/inv); put('cs_oip3',o); put('cs_iip3',o-Gdb); } else wipe(['cs_oip3','cs_iip3']);
+    let invp=0, anyp=false, gb=1;
+    st.forEach(s=>{ if(s.p1!==null){ anyp=true; invp+=gb/10**(s.p1/10); } gb*=10**(s.g/10); });
+    if(anyp){ const ip1=10*LOG10(1/invp); put('cs_ip1',ip1); put('cs_op1',ip1+Gdb-1); } else wipe(['cs_ip1','cs_op1']);
     return true;
   }});
 
