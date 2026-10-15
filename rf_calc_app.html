@@ -117,11 +117,12 @@ input.out{background:var(--well);border-color:var(--line);cursor:default}
 .st{border:1px solid var(--line);border-radius:10px;padding:6px 10px 10px;margin:8px 0;background:#fff}
 .sth{display:flex;justify-content:space-between;align-items:center}
 .sn{font-size:12.5px;font-weight:650;color:var(--ink)}
-.sg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.sg span{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
-.st input.num{height:38px;font-size:13.5px;padding:0 8px}
-@media (pointer:coarse){.st .iw.sg input.num{padding-left:38px}}
-@media (max-width:520px){.sg{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.sgrid>div>span{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+.sgrid>div,.sgrid .iw{min-width:0}
+.st input.num{height:38px;font-size:13.5px;padding:0 8px;min-width:0}
+@media (pointer:coarse){.st input.num{padding-left:38px}}
+@media (max-width:520px){.sgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .sx{width:30px;height:30px;border:0;border-radius:7px;background:none;color:var(--faint);font-size:19px;cursor:pointer}
 .sx:hover{background:var(--well);color:var(--red)}
 .add{width:100%;height:38px;margin:6px 0 4px;border:1.5px dashed var(--line2);border-radius:9px;background:none;color:var(--trace-ink);font-size:13px;font-weight:600;cursor:pointer}
@@ -684,7 +685,7 @@ def('lc',{title:'LC Resonance',desc:'Solve L, C or f₀ from the other two',cat:
 /* ---------- 9. Cascade ---------- */
 const CS={seq:0};
 const fld=(lab,html)=>`<div><span>${lab}</span>${html}</div>`;
-function stageHTML(){ const id=++CS.seq; return `<div class="st" data-sid="${id}"><div class="sth"><div class="sn"></div><button type="button" class="sx" aria-label="Remove stage">×</button></div><div class="sg">${fld('Gain, dB',iw('cs_g_'+id,{signed:1}))}${fld('NF, dB',iw('cs_nf_'+id))}${fld('OIP3, dBm',iw('cs_ip_'+id,{signed:1}))}${fld('IP1dB, dBm',iw('cs_p1_'+id,{signed:1}))}</div></div>`; }
+function stageHTML(){ const id=++CS.seq; return `<div class="st" data-sid="${id}"><div class="sth"><div class="sn"></div><button type="button" class="sx" aria-label="Remove stage">×</button></div><div class="sgrid">${fld('Gain, dB',iw('cs_g_'+id,{signed:1}))}${fld('NF, dB',iw('cs_nf_'+id))}${fld('OIP3, dBm',iw('cs_ip_'+id,{signed:1}))}${fld('IP1dB, dBm',iw('cs_p1_'+id,{signed:1}))}</div></div>`; }
 function csNum(){ document.querySelectorAll('#cs_stages .st[data-sid] .sn').forEach((e,i)=>e.textContent='Stage '+(i+1)); }
 function csAdd(){ $('cs_stages').insertAdjacentHTML('beforeend',stageHTML()); csNum(); }
 function csReset(){ document.querySelectorAll('#cs_stages .st[data-sid]').forEach(e=>e.remove()); for(let i=0;i<3;i++) csAdd(); }
