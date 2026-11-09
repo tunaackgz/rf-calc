@@ -151,6 +151,48 @@ input.out{background:var(--well);border-color:var(--line);cursor:default}
 .sv .tx.m{fill:#8f7f52;font-size:13px}
 .sv .tx.v{font-family:var(--mono);font-style:normal;font-size:11px;font-weight:600;fill:var(--trace-ink)}
 
+[hidden]{display:none!important}
+/* bode plot */
+.sv .gr{stroke:#e2e5e0;stroke-width:1}
+.sv .g3{stroke:var(--red);stroke-width:1;stroke-dasharray:4 3;opacity:.7}
+.sv .cv{stroke:var(--trace);stroke-width:2.2;fill:none}
+.sv .cvd{fill:#fff;stroke:var(--trace);stroke-width:2}
+.sv .ev{fill:var(--ink)}
+.sv .ax{font-family:var(--sans);font-style:normal;font-size:10px;fill:#6c7480}
+.sv .ax.a{fill:var(--red)}
+.sv .ax.e{font-family:var(--mono);font-weight:600;fill:var(--ink)}
+.bode{max-width:420px!important}
+/* nyquist ruler */
+.nyc{margin-top:14px}
+.nyq{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;margin:4px 0 0;padding:0 0 4px}
+.nyq svg{display:block;width:100%;min-width:618px;height:auto}
+.sv .za{fill:#eef1ec}.sv .zb{fill:#e2e6df}.sv .zg{fill:#d3ecd9}
+.sv .nb{stroke:#b9c0b8;stroke-width:1}.sv .ns{stroke:#7d858d}
+.sv .nax{stroke:#1f2630;stroke-width:1.6}
+.sv .nz{font-family:var(--sans);font-style:normal;font-size:13px;font-weight:650;fill:#2a313b}
+.sv .nl{font-family:var(--mono);font-style:normal;font-size:12.5px;font-weight:600;fill:#151b23}
+.sv .nf{font-family:var(--math);font-style:italic;font-size:16.5px;font-weight:600;fill:#151b23}
+.sv .tg{stroke:#1a8f4e;stroke-width:3.2;stroke-linecap:round}.sv .tgd{fill:#1a8f4e}
+.sv .tr{stroke:#d4372f;stroke-width:2.4;stroke-linecap:round;opacity:.8}.sv .tr.t1{opacity:1;stroke-width:3}.sv .trd{fill:#d4372f}
+.sv .tlg{font-family:var(--mono);font-style:normal;font-size:13.5px;font-weight:700;fill:#11683a}
+.sv .tlr{font-family:var(--mono);font-style:normal;font-size:13px;font-weight:700;fill:#a8231d}
+.nyth{font-size:13px;font-weight:650;margin:16px 0 4px}
+.nyt{width:100%;border-collapse:collapse;font-size:13.5px}
+.nyt th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1.5px solid var(--line2)}
+.nyt td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.nyt .f{text-align:right;font-family:var(--mono);font-weight:500}
+.nyt th.f{font-family:var(--sans);font-weight:600}
+.sv .nfu{font-family:var(--sans);font-style:normal;font-size:11.5px;font-weight:600;fill:#4f5864}
+.nyt tr.in td{background:#e6f4ea}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+.tag.g{background:#d3ecd9;color:#11683a}.tag.r{background:#f7dfdc;color:#a8231d}
+.nyt .sub{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.nyleg{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:6px}
+.nyleg span{display:flex;align-items:center;gap:6px}
+.lg{display:inline-block;width:10px;height:10px;border-radius:50%}
+.lg.g{background:#1e9e57}.lg.r{background:#d4372f}
+.nyswipe{display:none}
+@media (max-width:660px){.nyswipe{display:block}}
 @media (max-width:400px){
   .row{grid-template-columns:44px minmax(0,1fr) 106px 60px;gap:7px}
   .card{padding:10px 12px 8px}
@@ -168,22 +210,24 @@ const LOG10 = Math.log10, PI = Math.PI, C0 = 299792458, KB = 1.380649e-23, ETA0 
 
 /* ================= number formatting ================= */
 function trim(s){ if(s.indexOf('.')<0) return s+'.0'; s=s.replace(/0+$/,''); return s.endsWith('.')?s+'0':s; }
-function fmt(v){
+function fmt(v,d){
+  d=d==null?3:d;
   if(v===Infinity) return '∞';
   if(v===-Infinity) return '−∞';
   if(typeof v!=='number'||!isFinite(v)) return '';
   if(Object.is(v,-0)) v=0;
   const a=Math.abs(v);
-  if(a!==0&&(a<0.01||a>=1e6)){ const p=v.toExponential(3).split('e'); return trim(p[0])+'e'+p[1].replace('+',''); }
-  return trim(v.toFixed(3));
+  if(a!==0&&(a<0.01||a>=1e6)){ const p=v.toExponential(d).split('e'); return trim(p[0])+'e'+p[1].replace('+',''); }
+  return trim(v.toFixed(d));
 }
-function fmtSI(v,u){
+function fmtSI(v,u,d){
+  d=d==null?3:d;
   if(!isFinite(v)) return '';
   if(v===0) return '0.0 '+u;
   const P=[[1e-15,'f'],[1e-12,'p'],[1e-9,'n'],[1e-6,'µ'],[1e-3,'m'],[1,''],[1e3,'k'],[1e6,'M'],[1e9,'G']];
   const a=Math.abs(v); let p=P[0];
   for(const q of P) if(a>=q[0]*0.9995) p=q;
-  return trim((v/p[0]).toFixed(3))+' '+p[1]+u;
+  return trim((v/p[0]).toFixed(d))+' '+p[1]+u;
 }
 const clean=(v,ref)=>Math.abs(v)<1e-9*ref?0:v;
 
@@ -202,12 +246,16 @@ const UIDX={}, DDEL={};
 /* ================= value access ================= */
 function raw(id){ const el=$(id); return el?el.value.trim().replace(/,/g,'.').replace(/−/g,'-'):''; }
 const has=id=>raw(id)!=='';
-function num(id){ const s=raw(id); return s===''?NaN:Number(s); }
+function num(id){ const el=$(id); if(el&&el.dataset.full!=null&&el.value===el.dataset.shown) return Number(el.dataset.full); const s=raw(id); return s===''?NaN:Number(s); }
+// keep full precision behind every displayed (rounded) result, so chained calculations do not accumulate rounding
+function decOf(el){ const sc=el.closest&&el.closest('.screen'); return sc&&SC[sc.id]&&SC[sc.id].dec!=null?SC[sc.id].dec:3; }
+function show(el,v){ el.value=fmt(v,decOf(el)); el.dataset.full=String(v); el.dataset.shown=el.value; }
+function forget(el){ delete el.dataset.full; delete el.dataset.shown; }
 function factor(id){ const el=DDEL[id]; return el?UNITS[el.dataset.units][UIDX[id]][1]:1; }
 const getSI=id=>num(id)*factor(id);
-function put(id,v){ const el=$(id); el.value=fmt(v/factor(id)); if(el.classList.contains('num')){ el.classList.add('computed'); el.classList.remove('dirty'); } }
+function put(id,v){ const el=$(id); show(el,v/factor(id)); if(el.classList.contains('num')){ el.classList.add('computed'); el.classList.remove('dirty'); } }
 function putX(src,map){ for(const k in map) if(k!==src) put(k,map[k]); }
-function wipe(ids){ ids.forEach(id=>{ const el=$(id); if(el){ el.value=''; el.classList.remove('computed'); } }); }
+function wipe(ids){ ids.forEach(id=>{ const el=$(id); if(el){ el.value=''; forget(el); el.classList.remove('computed'); } }); }
 
 /* ================= edit order (which field is the source) ================= */
 const ORDER={};
@@ -293,21 +341,23 @@ const SC={};
 const def=(id,o)=>{ SC[id]=o; };
 
 /* ---------- 1. dB / dBm ---------- */
-def('db',{title:'dB / dBm Calculator',desc:'Gain ratios, dBm, W and dBV, peak voltage and current',cat:'conv',badge:'dB',
+def('db',{title:'dB / dBm Calculator',desc:'Gain ratios, dBm ↔ W ↔ dBV ↔ voltage ↔ current',cat:'conv',badge:'dB',
   body: card('dB and ratios', rows(
       row('dB','Decibels','db_db',{signed:1,unit:'dB'}),
       row('<i>V</i><sub>r</sub>','Voltage ratio','db_vr',{unit:'×'}),
       row('<i>P</i><sub>r</sub>','Power ratio','db_pr',{unit:'×'})))
-    + card('Power and voltage',
+    + card('Power, voltage and current',
       rows(row('<i>R</i>','Load resistance','db_r',{val:'50',unit:'Ω'}))
       + rows(row('<i>P</i>','Power','db_dbm',{signed:1,unit:'dBm'}),
              row('<i>P</i>','Power','db_w',{unit:'W'}),
              row('<i>V</i>','Voltage level','db_dbv',{signed:1,unit:'dBV'}))
-      + rows(row('<i>V</i><sub>rms</sub>','RMS voltage','db_vrms',{out:1,unit:'V'}),
-             row('<i>V</i><sub>pk</sub>','Peak voltage','db_vpk',{out:1,unit:'V'}),
-             row('<i>V</i><sub>pp</sub>','Peak-to-peak voltage','db_vpp',{out:1,unit:'V'}),
-             row('<i>I</i><sub>pk</sub>','Peak current','db_ipk',{out:1,unit:'A'}))),
-  fx:'dB = 20·log(V₂/V₁) = 10·log(P₂/P₁)<br>dBm = 10·log(P / 1 mW)<br>dBV = 20·log(V<sub>rms</sub> / 1 V)<br>V<sub>rms</sub> = √(P·R), V<sub>pk</sub> = √2·V<sub>rms</sub>, I<sub>pk</sub> = V<sub>pk</sub>/R',
+      + rows(row('<i>V</i><sub>rms</sub>','RMS voltage','db_vrms',{unit:'V'}),
+             row('<i>V</i><sub>pk</sub>','Peak voltage','db_vpk',{unit:'V'}),
+             row('<i>V</i><sub>pp</sub>','Peak-to-peak voltage','db_vpp',{unit:'V'}),
+             row('<i>I</i><sub>rms</sub>','RMS current','db_irms',{unit:'A'}),
+             row('<i>I</i><sub>pk</sub>','Peak current','db_ipk',{unit:'A'}))
+      + `<p class="note">Enter any one value in this card. Peak values assume a sine wave.</p>`),
+  fx:'dB = 20·log(V₂/V₁) = 10·log(P₂/P₁)<br>dBm = 10·log(P / 1 mW)<br>dBV = 20·log(V<sub>rms</sub> / 1 V)<br>V<sub>rms</sub> = √(P·R), I<sub>rms</sub> = √(P/R)<br>V<sub>pk</sub> = √2·V<sub>rms</sub>, V<sub>pp</sub> = 2·V<sub>pk</sub>, I<sub>pk</sub> = √2·I<sub>rms</sub>',
   calc(){
     let did=false;
     const g1=['db_db','db_vr','db_pr'], s1=lastEd('db',g1);
@@ -321,19 +371,28 @@ def('db',{title:'dB / dBm Calculator',desc:'Gain ratios, dBm, W and dBV, peak vo
         putX(s1,{db_db:dB,db_vr:10**(dB/20),db_pr:10**(dB/10)}); did=true;
       }
     }
-    const g2=['db_dbm','db_w','db_dbv'], s2=lastEd('db',g2);
+    const g2=['db_dbm','db_w','db_dbv','db_vrms','db_vpk','db_vpp','db_irms','db_ipk'], s2=lastEd('db',g2);
     if(s2){
-      if(!has(s2)){ wipe([...g2,'db_vrms','db_vpk','db_vpp','db_ipk']); did=true; }
+      if(!has(s2)){ wipe(g2); did=true; }
       else{
         const R=num('db_r'); if(!(R>0)) return 'Load resistance must be greater than 0.';
         const v=num(s2); if(!isFinite(v)) return 'Enter a valid number.';
-        let P;
-        if(s2==='db_dbm') P=1e-3*10**(v/10);
-        else if(s2==='db_w'){ if(v<=0) return 'Power must be greater than 0 W.'; P=v; }
-        else{ const vr=10**(v/20); P=vr*vr/R; }
-        const vr=Math.sqrt(P*R), vp=vr*Math.SQRT2;
-        putX(s2,{db_dbm:10*LOG10(P/1e-3),db_w:P,db_dbv:20*LOG10(vr)});
-        put('db_vrms',vr); put('db_vpk',vp); put('db_vpp',2*vp); put('db_ipk',vp/R); did=true;
+        const pos=['db_w','db_vrms','db_vpk','db_vpp','db_irms','db_ipk'];
+        if(pos.includes(s2)&&v<=0) return 'This value must be greater than 0.';
+        const S2=Math.SQRT2; let P;
+        switch(s2){
+          case 'db_dbm': P=1e-3*10**(v/10); break;
+          case 'db_w': P=v; break;
+          case 'db_dbv': P=10**(v/10)/R; break;
+          case 'db_vrms': P=v*v/R; break;
+          case 'db_vpk': P=(v/S2)**2/R; break;
+          case 'db_vpp': P=(v/(2*S2))**2/R; break;
+          case 'db_irms': P=v*v*R; break;
+          case 'db_ipk': P=(v/S2)**2*R; break;
+        }
+        const vr=Math.sqrt(P*R), ir=Math.sqrt(P/R);
+        putX(s2,{db_dbm:10*LOG10(P/1e-3),db_w:P,db_dbv:20*LOG10(vr),db_vrms:vr,db_vpk:vr*S2,db_vpp:2*vr*S2,db_irms:ir,db_ipk:ir*S2});
+        did=true;
       }
     }
     return did||'Enter a value to convert.';
@@ -522,7 +581,7 @@ def('tl',{title:'Transmission Line',desc:'Microstrip, CPWG and stripline: W ↔ 
     document.querySelectorAll('#tl_unit button').forEach(b=>b.addEventListener('click',()=>{
       const ni=+b.dataset.v, oi=TL.unit; if(ni===oi) return;
       const r=DIM[oi][1]/DIM[ni][1];
-      DIMIDS.forEach(id=>{ const v=num(id); if(isFinite(v)) $(id).value=fmt(v*r); });
+      DIMIDS.forEach(id=>{ const v=num(id); if(isFinite(v)) show($(id),v*r); });
       TL.unit=ni;
       document.querySelectorAll('#tl_unit button').forEach(x=>x.classList.toggle('on',x===b));
       document.querySelectorAll('#tl .dimu').forEach(s=>s.textContent=DIM[ni][0]);
@@ -682,6 +741,120 @@ def('lc',{title:'LC Resonance',desc:'Solve L, C or f₀ from the other two',cat:
     return true;
   }});
 
+/* ---------- 8b. Reactance ---------- */
+def('xr',{title:'Reactance',desc:'Impedance of an inductor or capacitor at a frequency',cat:'ckt',badge:'X',
+  body: card('', rows(row('<i>f</i>','Frequency','xr_f',{dd:'freq',def:1}))
+      + rows(gl('Inductor'), row('<i>L</i>','Inductance','xr_L',{dd:'ind'}), row('<i>X</i><sub>L</sub>','Inductive reactance','xr_XL',{unit:'Ω'}))
+      + rows(gl('Capacitor'), row('<i>C</i>','Capacitance','xr_C',{dd:'cap'}), row('<i>X</i><sub>C</sub>','Capacitive reactance','xr_XC',{unit:'Ω'})))
+    + `<p class="note">Enter L or C to get its reactance, or enter a reactance to find the part value.</p>`,
+  fx:'X<sub>L</sub> = 2π·f·L, Z<sub>L</sub> = +jX<sub>L</sub><br>X<sub>C</sub> = 1/(2π·f·C), Z<sub>C</sub> = −jX<sub>C</sub>',
+  calc(){
+    const f=getSI('xr_f'); if(!(f>0)) return 'Enter a frequency.';
+    const w=2*PI*f; let did=false;
+    const sL=lastEd('xr',['xr_L','xr_XL']);
+    if(sL){
+      if(!has(sL)) wipe(['xr_L','xr_XL']);
+      else if(sL==='xr_L'){ const L=getSI('xr_L'); if(!(L>0)) return 'Inductance must be greater than 0.'; put('xr_XL',w*L); }
+      else { const X=num('xr_XL'); if(!(X>0)) return 'Reactance must be greater than 0 Ω.'; put('xr_L',X/w); }
+      did=true;
+    }
+    const sC=lastEd('xr',['xr_C','xr_XC']);
+    if(sC){
+      if(!has(sC)) wipe(['xr_C','xr_XC']);
+      else if(sC==='xr_C'){ const C=getSI('xr_C'); if(!(C>0)) return 'Capacitance must be greater than 0.'; put('xr_XC',1/(w*C)); }
+      else { const X=num('xr_XC'); if(!(X>0)) return 'Reactance must be greater than 0 Ω.'; put('xr_C',1/(w*X)); }
+      did=true;
+    }
+    return did||'Enter an inductance, a capacitance or a reactance.';
+  }});
+
+/* ---------- 8c. RC / RL filter ---------- */
+const FL={kind:'rc',type:'lp'};
+function partH(t,x1,x2,y){ return t==='R'?resH(x1,x2,y):t==='L'?indH(x1,x2,y):capH(x1,x2,y); }
+function partV(t,x,y1,y2){ return t==='R'?resV(x,y1,y2):t==='L'?indV(x,y1,y2):capV(x,y1,y2); }
+function filtSVG(kind,type){
+  const X=kind==='rc'?'C':'L';
+  const se=(kind==='rc')===(type==='lp')?'R':X, sh=se==='R'?X:'R';
+  const yT=28,yB=88; let s='';
+  s+=L_(20,yT,96,yT)+partH(se,96,150,yT)+L_(150,yT,260,yT)+L_(20,yB,260,yB);
+  s+=L_(196,yT,196,46)+partV(sh,196,46,70)+L_(196,70,196,yB)+dot(196,yT)+dot(196,yB);
+  s+=T_(123,13,`<tspan>${se}</tspan>`)+T_(212,63,`<tspan>${sh}</tspan>`,'start');
+  s+=port(20,yT)+port(20,yB)+port(260,yT)+port(260,yB)+T_(20,62,'in','middle','tx s')+T_(260,62,'out','middle','tx s');
+  return `<svg viewBox="0 0 280 100" class="sv">${s}</svg>`;
+}
+function bodeSVG(type,fc,f){
+  const x0=46,x1=306,y0=16,y1=136, lo=-2, hi=2;
+  const X=ff=>x0+(LOG10(ff/fc)-lo)/(hi-lo)*(x1-x0);
+  const Y=db=>y0+Math.min(Math.max(-db,0),40)/40*(y1-y0);
+  const gain=ff=>{ const x=ff/fc; return type==='lp'?-10*LOG10(1+x*x):20*LOG10(x)-10*LOG10(1+x*x); };
+  let s='';
+  for(let d=0;d<=40;d+=10){ const y=Y(-d); s+=`<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" class="gr"/>`+T_(x0-6,y+4,d?'−'+d:'0 dB','end','ax'); }
+  const lab=['f<tspan font-size="8" dy="2">c</tspan><tspan dy="-2">/100</tspan>','f<tspan font-size="8" dy="2">c</tspan><tspan dy="-2">/10</tspan>','f<tspan font-size="8" dy="2">c</tspan>','10f<tspan font-size="8" dy="2">c</tspan>','100f<tspan font-size="8" dy="2">c</tspan>'];
+  for(let k=lo;k<=hi;k++){ const x=X(fc*10**k); s+=`<line x1="${x}" y1="${y0}" x2="${x}" y2="${y1}" class="gr"/>`+T_(x,y1+16,lab[k-lo],'middle','ax'); }
+  s+=`<line x1="${x0}" y1="${Y(-3)}" x2="${x1}" y2="${Y(-3)}" class="g3"/>`+(type==='lp'?T_(x1,Y(-3)-4,'−3 dB','end','ax a'):T_(x0+4,Y(-3)-4,'−3 dB','start','ax a'));
+  let d='';
+  for(let i=0;i<=160;i++){ const ff=fc*10**(lo+(hi-lo)*i/160); d+=(i?'L':'M')+X(ff).toFixed(1)+' '+Y(gain(ff)).toFixed(1); }
+  s+=`<path d="${d}" class="cv"/>`+`<circle cx="${X(fc)}" cy="${Y(-3)}" r="3.5" class="cvd"/>`;
+  if(f>0&&LOG10(f/fc)>=lo&&LOG10(f/fc)<=hi){
+    // put the label on the side of the point that is away from the curve
+    const g=gain(f), y=Y(g), x=X(f), lp=type==='lp', low=y>y1-24;
+    const right=lp?low:!low, tx=right?Math.min(x+8,x1-70):Math.max(x-8,x0+70);
+    s+=`<circle cx="${x}" cy="${y}" r="4" class="ev"/>`+T_(tx,low?y-9:y+17,fmt(g)+' dB',right?'start':'end','ax e');
+  }
+  return `<svg viewBox="0 0 320 160" class="sv bode">${s}</svg>`;
+}
+def('fl',{title:'RC / RL Filter',desc:'First-order low-pass and high-pass: fc, τ and response',cat:'ckt',badge:'RC',
+  body: card('',
+      seg('fl_kind',[['rc','RC'],['rl','RL']])
+      + seg('fl_type',[['lp','Low-pass'],['hp','High-pass']])
+      + `<div class="dia" id="fl_dia"></div>`
+      + rows(row('<i>R</i>','Resistance','fl_R',{unit:'Ω'}),
+             row('<i>C</i>','Capacitance','fl_C',{dd:'cap',tl:'rc'}),
+             row('<i>L</i>','Inductance','fl_L',{dd:'ind',tl:'rl'}),
+             row('<i>f</i><sub>c</sub>','Cutoff frequency, −3 dB','fl_fc',{dd:'freq',def:2}))
+      + rows(row('<i>f</i>','Evaluate at frequency','fl_f',{dd:'freq',def:2,sub:'optional'}))
+      + rows(row('τ','Time constant','fl_tau',{out:1,dd:'time',def:2}),
+             row('|<i>H</i>|','Gain at f','fl_mag',{out:1,unit:'dB'}),
+             row('∠<i>H</i>','Phase at f','fl_ph',{out:1,unit:'°'})))
+    + `<p class="note">Enter any two of R, C (or L) and f<sub>c</sub>; the third is solved.</p>`
+    + `<div class="card" id="fl_plotc" hidden><h3>Frequency response</h3><div class="dia" id="fl_plot"></div></div>`,
+  fx:'RC: f<sub>c</sub> = 1/(2π·R·C), τ = R·C<br>RL: f<sub>c</sub> = R/(2π·L), τ = L/R<br>Low-pass: H = 1/(1 + j·f/f<sub>c</sub>)<br>High-pass: H = (j·f/f<sub>c</sub>)/(1 + j·f/f<sub>c</sub>)',
+  init(){
+    const redraw=()=>{ $('fl_dia').innerHTML=filtSVG(FL.kind,FL.type); };
+    const setKind=v=>{
+      FL.kind=v;
+      document.querySelectorAll('#fl_kind button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+      document.querySelectorAll('#fl [data-tl]').forEach(r=>{ r.style.display=r.dataset.tl===v?'':'none'; });
+      redraw(); commit('fl',true);
+    };
+    document.querySelectorAll('#fl_kind button').forEach(b=>b.addEventListener('click',()=>setKind(b.dataset.v)));
+    document.querySelectorAll('#fl_type button').forEach(b=>b.addEventListener('click',()=>{
+      FL.type=b.dataset.v;
+      document.querySelectorAll('#fl_type button').forEach(x=>x.classList.toggle('on',x===b));
+      redraw(); commit('fl',true);
+    }));
+    setKind('rc');
+  },
+  clear(){ $('fl_plotc').hidden=true; $('fl_plot').innerHTML=''; },
+  calc(){
+    const rc=FL.kind==='rc', xid=rc?'fl_C':'fl_L';
+    const r=target('fl',['fl_R',xid,'fl_fc']); if(r.err) return r.err;
+    let R=num('fl_R'), X=getSI(xid), fc=getSI('fl_fc');
+    if(r.t==='fl_fc'){ if(!(R>0&&X>0)) return 'R and '+(rc?'C':'L')+' must be greater than 0.'; fc=rc?1/(2*PI*R*X):R/(2*PI*X); put('fl_fc',fc); }
+    else if(r.t==='fl_R'){ if(!(X>0&&fc>0)) return (rc?'C':'L')+' and fc must be greater than 0.'; R=rc?1/(2*PI*fc*X):2*PI*fc*X; put('fl_R',R); }
+    else { if(!(R>0&&fc>0)) return 'R and fc must be greater than 0.'; X=rc?1/(2*PI*fc*R):R/(2*PI*fc); put(xid,X); }
+    put('fl_tau',1/(2*PI*fc));
+    let f=NaN;
+    if(has('fl_f')){
+      f=getSI('fl_f'); if(!(f>0)) return 'The evaluation frequency must be greater than 0.';
+      const x=f/fc, lp=FL.type==='lp';
+      put('fl_mag',lp?-10*LOG10(1+x*x):20*LOG10(x)-10*LOG10(1+x*x));
+      put('fl_ph',(lp?0:90)-Math.atan(x)*180/PI);
+    } else wipe(['fl_mag','fl_ph']);
+    $('fl_plot').innerHTML=bodeSVG(FL.type,fc,f); $('fl_plotc').hidden=false;
+    return true;
+  }});
+
 /* ---------- 9. Cascade ---------- */
 const CS={seq:0};
 const fld=(lab,html)=>`<div><span>${lab}</span>${html}</div>`;
@@ -778,47 +951,122 @@ def('fs',{title:'Free Space Path Loss',desc:'FSPL and path loss with antenna gai
     return true;
   }});
 
+const fmt2=v=>fmt(v,2);
+function nyqImg(fs,fin){ const fa=Math.abs(fin-fs*Math.round(fin/fs)); return k=>k%2?((k-1)/2)*fs+fa:(k/2)*fs-fa; }
+function nyqSVG(fs,fin,uf,un){
+  const N=6, x0=24, zw=95, top=70, base=130, W=x0*2+zw*N;
+  const X=f=>x0+f/(fs/2)*zw;
+  const lab=v=>v===0?'0':fmt2(v/uf)+' '+un;
+  const clampX=x=>Math.min(Math.max(x,x0+64),W-x0-64);
+  const S='f<tspan font-size="10" dy="3">s</tspan>';
+  const fsLab=k=>k===0?'0':k%2===0?(k===2?'':k/2)+S:(k===1?'':k)+S+'<tspan dy="-3">/2</tspan>';
+  const zi=Math.floor(fin/(fs/2))+1, img=nyqImg(fs,fin);
+  let s='';
+  // zone bands with their names above
+  for(let z=1;z<=N;z++){
+    s+=`<rect x="${X((z-1)*fs/2)}" y="${top}" width="${zw}" height="${base-top}" class="${z===zi?'zg':z%2?'za':'zb'}"/>`;
+    s+=T_(X((z-0.5)*fs/2),top-9,'Zone '+z,'middle','nz');
+  }
+  // boundaries: fs multiples and their real frequency below the axis
+  for(let k=0;k<=N;k++){
+    const x=X(k*fs/2), a=k===0?'start':k===N?'end':'middle';
+    s+=`<line x1="${x}" y1="${top}" x2="${x}" y2="${base+6}" class="${k%2?'nb':'nb ns'}"/>`;
+    s+=T_(x,base+25,fsLab(k),a,'nf')+T_(x,base+44,k===0?'0':fmt2(k*fs/2/uf),a,'nl');
+  }
+  s+=`<line x1="${x0}" y1="${base}" x2="${W-x0}" y2="${base}" class="nax"/>`;
+  s+=T_(x0,base+64,'axis in '+un,'start','nfu');
+  // tones
+  for(let z=1;z<=N;z++){
+    const x=X(img(z));
+    if(z===zi){
+      s+=`<line x1="${x}" y1="${base}" x2="${x}" y2="${top+8}" class="tg"/><circle cx="${x}" cy="${top+8}" r="4.6" class="tgd"/>`;
+      s+=T_(clampX(x),18,'f<tspan font-size="10" dy="3">in</tspan><tspan dy="-3"> '+lab(img(z))+'</tspan>','middle','tlg');
+    } else {
+      const yt=z===1?top+18:top+28;
+      s+=`<line x1="${x}" y1="${base}" x2="${x}" y2="${yt}" class="tr${z===1?' t1':''}"/><circle cx="${x}" cy="${yt}" r="3.8" class="trd"/>`;
+      if(z===1) s+=T_(clampX(x),38,'alias '+lab(img(z)),'middle','tlr');
+    }
+  }
+  if(zi>N) s+=T_(W-x0,18,'f<tspan font-size="10" dy="3">in</tspan><tspan dy="-3"> is in zone '+zi+' →</tspan>','end','tlg');
+  return `<svg viewBox="0 0 ${W} ${base+72}" class="sv nysv">${s}</svg>`;
+}
+function nyqTable(fs,fin,uf,un){
+  const img=nyqImg(fs,fin), zi=Math.floor(fin/(fs/2))+1; let h='';
+  for(let k=1;k<=10;k++){
+    const f=img(k), isIn=k===zi;
+    h+=`<tr${isIn?' class="in"':''}><td>Zone ${k}</td><td class="f">${f===0?'0':fmt2(f/uf)} ${un}</td><td>${isIn?'<span class="tag g">Input</span>':'<span class="tag r">Alias</span>'}${k===1&&!isIn?'<span class="sub">what the ADC outputs</span>':''}</td></tr>`;
+  }
+  return `<div class="nyth">Tone frequency in zones 1 to 10</div><table class="nyt"><thead><tr><th>Zone</th><th class="f">Frequency</th><th>Type</th></tr></thead><tbody>${h}</tbody></table>${zi>10?`<p class="note">The input tone itself is in zone ${zi}.</p>`:''}`;
+}
 /* ---------- 12. ADC ---------- */
-def('adc',{title:'ADC Calculator',desc:'SNR, NSD, jitter, processing gain, aliasing',cat:'sys',badge:'N',
+def('adc',{title:'ADC Calculator',desc:'SNR, NSD, jitter, processing gain, aliasing',cat:'sys',badge:'N',dec:2,
   body: card('Converter', rows(
       row('<i>N</i>','Resolution','adc_n',{unit:'bits'}),
       row('<i>f</i><sub>s</sub>','Sample rate','adc_fs',{dd:'freq',def:1}))
     + rows(row('<i>f</i><sub>in</sub>','Input frequency','adc_fin',{dd:'freq',def:1,sub:'optional'}),
            row('BW','Signal bandwidth','adc_bw',{dd:'freq',def:1,sub:'optional'}),
            row('<i>V</i><sub>FS</sub>','Full-scale input','adc_vfs',{unit:'V<sub>pp</sub>',sub:'optional'}),
+           row('<i>R</i><sub>in</sub>','Reference impedance','adc_rin',{val:'50',unit:'Ω'}),
            row('<i>t</i><sub>j</sub>','Aperture jitter, rms','adc_tj',{dd:'jit',def:0,sub:'optional'}),
-           row('SINAD','Measured SINAD','adc_sinad',{unit:'dB',sub:'optional'})))
+           row('SNR','SNR (datasheet)','adc_snrds',{unit:'dBFS',sub:'optional'}),
+           row('ENOB','Effective number of bits','adc_enob',{unit:'bits',sub:'or'}))
+    + `<p class="note">Enter SNR (datasheet) or ENOB, the other is calculated.</p>`)
     + card('Noise and SNR', rows(
       row('SNR<sub>q</sub>','Ideal SNR, quantization only','adc_snr',{out:1,unit:'dB'}),
-      row('NSD','Noise spectral density','adc_nsd',{out:1,unit:'dBFS/Hz'}),
       row('SNR<sub>j</sub>','Jitter-limited SNR','adc_snrj',{out:1,unit:'dB'}),
-      row('SNR','Quantization and jitter combined','adc_snrt',{out:1,unit:'dB'}),
+      row('SNR','Quantization and jitter combined','adc_snrt',{out:1,unit:'dB'}))
+      + rows(gl('Noise density, using SNR (datasheet) if entered'),
+      row('NSD','Noise spectral density','adc_nsd',{out:1,unit:'dBFS/Hz'}),
+      row('NSD','Noise spectral density','adc_nsdm',{out:1,unit:'dBm/Hz'}),
+      row('NF','Noise figure','adc_nf',{out:1,unit:'dB'}),
+      row('<i>P</i><sub>FS</sub>','Full-scale power','adc_pfs',{out:1,unit:'dBm'}))
+      + rows(
       row('PG','Processing gain','adc_pg',{out:1,unit:'dB'}),
-      row('SNR<sub>BW</sub>','SNR in signal bandwidth','adc_snrbw',{out:1,unit:'dB'}),
-      row('ENOB','Effective number of bits','adc_enob',{out:1,unit:'bits'})))
+      row('SNR<sub>BW</sub>','SNR in signal bandwidth','adc_snrbw',{out:1,unit:'dB'})))
     + card('Sampling', rows(
       row('LSB','LSB size','adc_lsb',{out:1}),
       row('Zone','Nyquist zone','adc_zone',{out:1}),
       row('<i>f</i><sub>alias</sub>','Frequency after sampling','adc_alias',{out:1,dd:'freq',def:1}))),
-  fx:'SNR<sub>q</sub> = 6.02·N + 1.76 dB<br>NSD = −SNR<sub>q</sub> − 10·log(f<sub>s</sub>/2)<br>SNR<sub>j</sub> = −20·log(2π·f<sub>in</sub>·t<sub>j</sub>)<br>PG = 10·log(f<sub>s</sub> / 2BW)<br>ENOB = (SINAD − 1.76)/6.02, from combined SNR if SINAD is empty<br>LSB = V<sub>FS</sub> / 2<sup>N</sup>',
+  after:`<div class="card nyc" id="adc_nyc" hidden><h3>Nyquist zones</h3><div class="nyq" id="adc_nyq"></div><p class="note nyswipe">Swipe sideways to see all six zones.</p><div class="nyleg"><span><i class="lg g"></i>Input tone</span><span><i class="lg r"></i>Aliases and images</span></div><div id="adc_nyt"></div></div>`,
+  clear(){ $('adc_nyc').hidden=true; $('adc_nyq').innerHTML=''; $('adc_nyt').innerHTML=''; },
+  fx:'SNR<sub>q</sub> = 6.02·N + 1.76 dB<br>NSD = −SNR − 10·log(f<sub>s</sub>/2) dBFS/Hz<br>P<sub>FS</sub> = 10·log((V<sub>FS</sub>/2√2)² / R<sub>in</sub> / 1 mW)<br>NSD = P<sub>FS</sub> − SNR − 10·log(f<sub>s</sub>/2) dBm/Hz<br>NF = NSD + 174 dB, kT₀ = −174 dBm/Hz at 290 K<br>SNR<sub>j</sub> = −20·log(2π·f<sub>in</sub>·t<sub>j</sub>)<br>PG = 10·log(f<sub>s</sub> / 2BW)<br>ENOB = (SNR − 1.76)/6.02<br>LSB = V<sub>FS</sub> / 2<sup>N</sup>',
   calc(){
     const N=num('adc_n'); if(!(Number.isInteger(N)&&N>=1&&N<=32)) return 'Resolution must be a whole number from 1 to 32.';
     const fs=getSI('adc_fs'); if(!(fs>0)) return 'Enter the sample rate.';
-    const snrq=6.02*N+1.76; put('adc_snr',snrq); put('adc_nsd',-snrq-10*LOG10(fs/2));
+    const snrq=6.02*N+1.76; put('adc_snr',snrq);
     let fin=NaN; if(has('adc_fin')){ fin=getSI('adc_fin'); if(!(fin>=0)) return 'Input frequency must be 0 or greater.'; }
     let tj=NaN; if(has('adc_tj')){ tj=getSI('adc_tj'); if(!(tj>0)) return 'Jitter must be greater than 0.'; }
     let snrt=snrq, jit=false;
     if(fin>0&&tj>0){ const sj=-20*LOG10(2*PI*fin*tj); put('adc_snrj',sj); snrt=-10*LOG10(10**(-snrq/10)+10**(-sj/10)); put('adc_snrt',snrt); jit=true; }
     else wipe(['adc_snrj','adc_snrt']);
-    if(has('adc_bw')){ const bw=getSI('adc_bw'); if(!(bw>0)) return 'Bandwidth must be greater than 0.'; if(bw>fs/2*1.000001) return 'Bandwidth cannot exceed fs/2.'; const pg=10*LOG10(fs/(2*bw)); put('adc_pg',pg); put('adc_snrbw',snrt+pg); }
+    // SNR used for noise density: datasheet value if given, otherwise quantization (+ jitter)
+    let snrB=snrt;
+    const sd=lastEd('adc',['adc_snrds','adc_enob']);
+    if(sd){
+      if(!has(sd)) wipe(['adc_snrds','adc_enob']);
+      else{
+        const v=num(sd);
+        if(sd==='adc_enob'){ if(!(v>0)) return 'ENOB must be greater than 0.'; snrB=6.02*v+1.76; put('adc_snrds',snrB); }
+        else { if(!isFinite(v)) return 'Enter a valid SNR.'; snrB=v; put('adc_enob',(v-1.76)/6.02); }
+      }
+    }
+    const nsdFS=-snrB-10*LOG10(fs/2); put('adc_nsd',nsdFS);
+    if(has('adc_vfs')){
+      const v=num('adc_vfs'); if(!(v>0)) return 'Full-scale voltage must be greater than 0.';
+      const R=num('adc_rin'); if(!(R>0)) return 'Reference impedance must be greater than 0.';
+      const pfs=10*LOG10((v/(2*Math.SQRT2))**2/R/1e-3), nsdm=pfs+nsdFS;
+      put('adc_pfs',pfs); put('adc_nsdm',nsdm); put('adc_nf',nsdm-10*LOG10(KB*290*1e3));
+    } else wipe(['adc_pfs','adc_nsdm','adc_nf']);
+    if(has('adc_bw')){ const bw=getSI('adc_bw'); if(!(bw>0)) return 'Bandwidth must be greater than 0.'; if(bw>fs/2*1.000001) return 'Bandwidth cannot exceed fs/2.'; const pg=10*LOG10(fs/(2*bw)); put('adc_pg',pg); put('adc_snrbw',snrB+pg); }
     else wipe(['adc_pg','adc_snrbw']);
-    if(isFinite(fin)){ $('adc_zone').value=String(Math.floor(fin/(fs/2))+1); put('adc_alias',Math.abs(fin-fs*Math.round(fin/fs))); }
-    else wipe(['adc_zone','adc_alias']);
-    if(has('adc_vfs')){ const v=num('adc_vfs'); if(!(v>0)) return 'Full-scale voltage must be greater than 0.'; $('adc_lsb').value=fmtSI(v/2**N,'V'); }
+    if(isFinite(fin)){
+      $('adc_zone').value=String(Math.floor(fin/(fs/2))+1); put('adc_alias',Math.abs(fin-fs*Math.round(fin/fs)));
+      const ui=UIDX['adc_fs'];
+      $('adc_nyq').innerHTML=nyqSVG(fs,fin,UNITS.freq[ui][1],UNITS.freq[ui][0]); $('adc_nyt').innerHTML=nyqTable(fs,fin,UNITS.freq[ui][1],UNITS.freq[ui][0]); $('adc_nyc').hidden=false;
+    }
+    else { wipe(['adc_zone','adc_alias']); $('adc_nyc').hidden=true; }
+    if(has('adc_vfs')){ const v=num('adc_vfs'); if(!(v>0)) return 'Full-scale voltage must be greater than 0.'; $('adc_lsb').value=fmtSI(v/2**N,'V',2); }
     else wipe(['adc_lsb']);
-    if(has('adc_sinad')){ const s=num('adc_sinad'); if(!isFinite(s)) return 'Enter a valid SINAD.'; put('adc_enob',(s-1.76)/6.02); }
-    else if(jit) put('adc_enob',(snrt-1.76)/6.02);
-    else wipe(['adc_enob']);
     return true;
   }});
 
@@ -844,7 +1092,7 @@ function build(){
   });
   h+=`<p class="foot">Works offline once installed</p></div></section>`;
   Object.entries(SC).forEach(([id,s])=>{
-    h+=`<section class="screen" id="${id}"><header class="bar"><button class="back" type="button" aria-label="Back">‹</button><h1>${s.title}</h1></header><div class="wrap">${s.body}<div class="err" id="err_${id}" role="alert"></div><div class="actions"><button class="btn primary" data-act="calc" type="button">Calculate</button><button class="btn" data-act="clear" type="button">Clear</button></div><p class="hint k">Press <kbd>Enter</kbd> to calculate. <kbd>↑</kbd> <kbd>↓</kbd> step the value, hold <kbd>Shift</kbd> for ×10.</p><p class="hint t">Tap ✓ on the keyboard or Calculate. Use ± for negative values.</p><div class="fx">${s.fx}</div></div></section>`;
+    h+=`<section class="screen" id="${id}"><header class="bar"><button class="back" type="button" aria-label="Back">‹</button><h1>${s.title}</h1></header><div class="wrap">${s.body}<div class="err" id="err_${id}" role="alert"></div><div class="actions"><button class="btn primary" data-act="calc" type="button">Calculate</button><button class="btn" data-act="clear" type="button">Clear</button></div><p class="hint k">Press <kbd>Enter</kbd> to calculate. <kbd>↑</kbd> <kbd>↓</kbd> step the value, hold <kbd>Shift</kbd> for ×10.</p><p class="hint t">Tap ✓ on the keyboard or Calculate. Use ± for negative values.</p><div class="fx">${s.fx}</div>${s.after||''}</div></section>`;
   });
   $('app').innerHTML=h;
   document.querySelectorAll('.dd').forEach(initDD);
@@ -863,7 +1111,7 @@ function closeDD(){ document.querySelectorAll('.dd.open').forEach(d=>d.classList
 function setUnit(id,i){
   const el=DDEL[id], set=UNITS[el.dataset.units], v=num(id), old=factor(id);
   UIDX[id]=i;
-  if(isFinite(v)) $(id).value=fmt(v*old/set[i][1]);
+  if(isFinite(v)) show($(id),v*old/set[i][1]);
   el.querySelector('.ddb span').textContent=set[i][0];
   el.querySelectorAll('.ddm div').forEach((d,j)=>d.classList.toggle('on',j===i));
 }
@@ -879,12 +1127,12 @@ function commit(sc,silent){
   else if(!silent) e.textContent=r;
 }
 function clearScreen(sc){
-  document.querySelectorAll('#'+sc+' input').forEach(i=>{ i.value=i.dataset.default!=null?i.dataset.default:''; i.classList.remove('dirty','computed'); });
+  document.querySelectorAll('#'+sc+' input').forEach(i=>{ i.value=i.dataset.default!=null?i.dataset.default:''; forget(i); i.classList.remove('dirty','computed'); });
   ORDER[sc]=[]; $('err_'+sc).textContent='';
   if(SC[sc].clear) SC[sc].clear();
 }
 function markEdit(t){
-  t.classList.add('dirty'); t.classList.remove('computed');
+  t.classList.add('dirty'); t.classList.remove('computed'); forget(t);
   const sc=scOf(t), o=ORDER[sc]||(ORDER[sc]=[]), i=o.indexOf(t.id);
   if(i>=0) o.splice(i,1); o.push(t.id);
   const e=$('err_'+sc); if(e) e.textContent='';
@@ -912,7 +1160,14 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'){ e.preventDefault(); commit(sc,false); if(coarse) t.blur(); }
   else if(e.key==='ArrowUp'||e.key==='ArrowDown'){ e.preventDefault(); if(stepVal(t,e.key==='ArrowUp'?1:-1,e.shiftKey)){ markEdit(t); commit(sc,true); } }
 });
-document.addEventListener('focusout',e=>{ const t=e.target; if(coarse&&t.classList&&t.classList.contains('num')&&t.classList.contains('dirty')) commit(scOf(t),true); });
+document.addEventListener('focusout',e=>{
+  const t=e.target;
+  if(!(t.classList&&t.classList.contains('num')&&t.classList.contains('dirty'))) return;
+  const sc=scOf(t), nx=e.relatedTarget;
+  // Moving to another field of the same calculator: calculate quietly, no "missing value" messages while filling in.
+  const toField=nx&&nx.classList&&nx.classList.contains('num')&&scOf(nx)===sc;
+  commit(sc,toField);
+});
 document.addEventListener('mousedown',e=>{ if(e.target.closest&&e.target.closest('.pm')) e.preventDefault(); });
 document.addEventListener('click',e=>{
   const t=e.target;
