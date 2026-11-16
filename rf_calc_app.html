@@ -125,6 +125,10 @@ input.out{background:var(--well);border-color:var(--line);cursor:default}
 @media (max-width:520px){.sgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .sx{width:30px;height:30px;border:0;border-radius:7px;background:none;color:var(--faint);font-size:19px;cursor:pointer}
 .sx:hover{background:var(--well);color:var(--red)}
+.prr{display:grid;grid-template-columns:52px minmax(0,1fr) 116px 64px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.prr .sx{margin-left:-6px}
+@media (max-width:400px){.prr{grid-template-columns:44px minmax(0,1fr) 106px 60px;gap:7px}}
+.prr .iw{min-width:0}
 .add{width:100%;height:38px;margin:6px 0 4px;border:1.5px dashed var(--line2);border-radius:9px;background:none;color:var(--trace-ink);font-size:13px;font-weight:600;cursor:pointer}
 
 /* L-match solutions */
@@ -149,6 +153,8 @@ input.out{background:var(--well);border-color:var(--line);cursor:default}
 .sv .tx{font-family:var(--math);font-style:italic;font-size:14px;fill:#323a46}
 .sv .tx.s{font-family:var(--sans);font-style:normal;font-size:10px;fill:#6c7480}
 .sv .tx.m{fill:#8f7f52;font-size:13px}
+.sv .hw{stroke:#d4372f;stroke-width:1.6;fill:none;stroke-linecap:round;opacity:.85}
+.sv .tx.hx{fill:#a8231d}
 .sv .tx.v{font-family:var(--mono);font-style:normal;font-size:11px;font-weight:600;fill:var(--trace-ink)}
 
 [hidden]{display:none!important}
@@ -239,7 +245,10 @@ const UNITS={
   dist:[['m',1],['km',1e3],['mi',1609.344],['nmi',1852]],
   ind:[['nH',1e-9],['µH',1e-6],['mH',1e-3],['H',1]],
   cap:[['pF',1e-12],['nF',1e-9],['µF',1e-6],['mF',1e-3]],
-  jit:[['fs',1e-15],['ps',1e-12],['ns',1e-9]]
+  jit:[['fs',1e-15],['ps',1e-12],['ns',1e-9]],
+  cur:[['mA',1e-3],['A',1]],
+  res:[['Ω',1],['kΩ',1e3],['MΩ',1e6]],
+  volt:[['mV',1e-3],['V',1]]
 };
 const UIDX={}, DDEL={};
 
@@ -264,8 +273,11 @@ function target(sc,ids){
   const f=ids.filter(has);
   if(f.length<ids.length-1) return {err:`Enter any ${ids.length-1} of the ${ids.length} values.`};
   if(f.length===ids.length-1) return {t:ids.find(i=>!has(i))};
-  const o=ORDER[sc]||[]; let best=ids[0], r=Infinity;
-  ids.forEach(i=>{ const k=o.indexOf(i); if(k<r){ r=k; best=i; } });
+  // all filled: re-solve the value the calculator produced last time, otherwise the one edited longest ago
+  const comp=ids.filter(i=>$(i).classList.contains('computed'));
+  if(comp.length===1) return {t:comp[0]};
+  const pool=comp.length?comp:ids, o=ORDER[sc]||[]; let best=pool[0], r=Infinity;
+  pool.forEach(i=>{ const k=o.indexOf(i); if(k<r){ r=k; best=i; } });
   return {t:best};
 }
 
@@ -808,7 +820,7 @@ def('fl',{title:'RC / RL Filter',desc:'First-order low-pass and high-pass: fc, �
       seg('fl_kind',[['rc','RC'],['rl','RL']])
       + seg('fl_type',[['lp','Low-pass'],['hp','High-pass']])
       + `<div class="dia" id="fl_dia"></div>`
-      + rows(row('<i>R</i>','Resistance','fl_R',{unit:'Ω'}),
+      + rows(row('<i>R</i>','Resistance','fl_R',{dd:'res'}),
              row('<i>C</i>','Capacitance','fl_C',{dd:'cap',tl:'rc'}),
              row('<i>L</i>','Inductance','fl_L',{dd:'ind',tl:'rl'}),
              row('<i>f</i><sub>c</sub>','Cutoff frequency, −3 dB','fl_fc',{dd:'freq',def:2}))
@@ -839,7 +851,7 @@ def('fl',{title:'RC / RL Filter',desc:'First-order low-pass and high-pass: fc, �
   calc(){
     const rc=FL.kind==='rc', xid=rc?'fl_C':'fl_L';
     const r=target('fl',['fl_R',xid,'fl_fc']); if(r.err) return r.err;
-    let R=num('fl_R'), X=getSI(xid), fc=getSI('fl_fc');
+    let R=getSI('fl_R'), X=getSI(xid), fc=getSI('fl_fc');
     if(r.t==='fl_fc'){ if(!(R>0&&X>0)) return 'R and '+(rc?'C':'L')+' must be greater than 0.'; fc=rc?1/(2*PI*R*X):R/(2*PI*X); put('fl_fc',fc); }
     else if(r.t==='fl_R'){ if(!(X>0&&fc>0)) return (rc?'C':'L')+' and fc must be greater than 0.'; R=rc?1/(2*PI*fc*X):2*PI*fc*X; put('fl_R',R); }
     else { if(!(R>0&&fc>0)) return 'R and fc must be greater than 0.'; X=rc?1/(2*PI*fc*R):R/(2*PI*fc); put(xid,X); }
@@ -853,6 +865,89 @@ def('fl',{title:'RC / RL Filter',desc:'First-order low-pass and high-pass: fc, �
     } else wipe(['fl_mag','fl_ph']);
     $('fl_plot').innerHTML=bodeSVG(FL.type,fc,f); $('fl_plotc').hidden=false;
     return true;
+  }});
+
+/* ---------- 8d. Resistor divider ---------- */
+function divSVG(){
+  const x=120; let s='';
+  s+=L_(40,14,x,14)+L_(x,14,x,24)+resV(x,24,58)+L_(x,58,x,70)+resV(x,70,104)+L_(x,104,x,116)+L_(40,116,240,116);
+  s+=L_(x,64,240,64)+dot(x,64)+port(40,14)+port(240,64)+port(40,116)+port(240,116);
+  s+=T_(x+14,46,'R<tspan font-size="10" dy="3">1</tspan>','start')+T_(x+14,92,'R<tspan font-size="10" dy="3">2</tspan>','start');
+  s+=T_(30,18,'V<tspan font-size="10" dy="3">in</tspan>','end')+T_(244,58,'V<tspan font-size="10" dy="3">out</tspan>','start')+T_(30,120,'0 V','end','tx s');
+  return `<svg viewBox="0 0 280 128" class="sv">${s}</svg>`;
+}
+def('dv',{title:'Resistor Divider',desc:'Solve Vin, Vout, R1 or R2 from the other three',cat:'ckt',badge:'÷',
+  body: card('Enter any three', `<div class="dia">${divSVG()}</div>` + rows(
+      row('<i>V</i><sub>in</sub>','Input voltage','dv_vin',{signed:1,dd:'volt',def:1}),
+      row('<i>R</i><sub>1</sub>','Top resistor','dv_r1',{dd:'res',def:1}),
+      row('<i>R</i><sub>2</sub>','Bottom resistor','dv_r2',{dd:'res',def:1}),
+      row('<i>V</i><sub>out</sub>','Output voltage','dv_vout',{signed:1,dd:'volt',def:1}))
+    + rows(row('<i>k</i>','Division ratio, V<sub>out</sub>/V<sub>in</sub>','dv_k',{out:1}),
+           row('<i>I</i>','Divider current','dv_i',{out:1,dd:'cur',def:0}),
+           row('<i>P</i>','Total power','dv_p',{out:1,unit:'mW'}),
+           row('<i>R</i><sub>th</sub>','Output (Thevenin) resistance','dv_rth',{out:1,dd:'res',def:1}))),
+  fx:'V<sub>out</sub> = V<sub>in</sub>·R₂/(R₁ + R₂)<br>R₁ = R₂·(V<sub>in</sub>/V<sub>out</sub> − 1), R₂ = R₁·V<sub>out</sub>/(V<sub>in</sub> − V<sub>out</sub>)<br>I = V<sub>in</sub>/(R₁ + R₂), R<sub>th</sub> = R₁∥R₂',
+  calc(){
+    const r=target('dv',['dv_vin','dv_r1','dv_r2','dv_vout']); if(r.err) return r.err;
+    let vi=getSI('dv_vin'), r1=getSI('dv_r1'), r2=getSI('dv_r2'), vo=getSI('dv_vout');
+    const posR=x=>x>0;
+    switch(r.t){
+      case 'dv_vout': if(!(posR(r1)&&posR(r2))) return 'R1 and R2 must be greater than 0.'; if(!isFinite(vi)) return 'Enter Vin.'; vo=vi*r2/(r1+r2); put('dv_vout',vo); break;
+      case 'dv_vin': if(!(posR(r1)&&posR(r2))) return 'R1 and R2 must be greater than 0.'; if(!isFinite(vo)) return 'Enter Vout.'; vi=vo*(r1+r2)/r2; put('dv_vin',vi); break;
+      case 'dv_r1': if(!posR(r2)) return 'R2 must be greater than 0.'; if(!(vo!==0&&vi/vo>1)) return 'Vout must be between 0 and Vin (same sign).'; r1=r2*(vi/vo-1); put('dv_r1',r1); break;
+      case 'dv_r2': if(!posR(r1)) return 'R1 must be greater than 0.'; if(!(vo!==0&&vi/vo>1)) return 'Vout must be between 0 and Vin (same sign).'; r2=r1*vo/(vi-vo); put('dv_r2',r2); break;
+    }
+    const I=vi/(r1+r2);
+    put('dv_k',r2/(r1+r2)); put('dv_i',Math.abs(I)); put('dv_p',vi*vi/(r1+r2)*1e3); put('dv_rth',r1*r2/(r1+r2));
+    return true;
+  }});
+
+/* ---------- 8e. Parallel resistors ---------- */
+const PR={seq:0};
+function prRowHTML(){ const id=++PR.seq; return `<div class="prr" data-pid="${id}"><div class="lbl prn"></div><div class="nm"><button type="button" class="sx" aria-label="Remove resistor">×</button></div>${iw('pr_r_'+id)}<div class="u"><div class="dd" data-for="pr_r_${id}" data-units="res" data-def="1"></div></div></div>`; }
+function prNum(){ document.querySelectorAll('#pr_list .prr').forEach((e,i)=>e.querySelector('.prn').innerHTML='<i>R</i><sub>'+(i+1)+'</sub>'); }
+function prAdd(){ $('pr_list').insertAdjacentHTML('beforeend',prRowHTML()); const r=$('pr_list').lastElementChild; initDD(r.querySelector('.dd')); prNum(); }
+function prReset(){ $('pr_list').innerHTML=''; prAdd(); prAdd(); }
+def('pr',{title:'Parallel Resistors',desc:'Equivalent of resistors in parallel, or the one you need',cat:'ckt',badge:'∥',
+  body: card('Resistors in parallel', `<div id="pr_list"></div><button type="button" class="add" id="pr_add">Add resistor</button>`
+      + rows(row('<i>R</i><sub>eq</sub>','Equivalent resistance','pr_eq',{out:1,dd:'res',def:0}),
+             row('<i>G</i><sub>eq</sub>','Equivalent conductance','pr_g',{out:1,unit:'mS'})))
+    + card('Find the missing resistor', rows(
+      row('<i>R</i><sub>a</sub>','Known resistor','pr_a',{dd:'res',def:0}),
+      row('<i>R</i><sub>target</sub>','Target equivalent','pr_t',{dd:'res',def:0}),
+      row('<i>R</i><sub>b</sub>','Required parallel resistor','pr_b',{out:1,dd:'res',def:0}),
+      row('E96','Nearest 1 % value','pr_be',{out:1,dd:'res',def:0}),
+      row('<i>R</i><sub>eq</sub>','Result with E96 value','pr_beq',{out:1,dd:'res',def:0}))),
+  fx:'1/R<sub>eq</sub> = 1/R₁ + 1/R₂ + … + 1/R<sub>n</sub><br>Two resistors: R<sub>eq</sub> = R₁·R₂/(R₁ + R₂)<br>R<sub>b</sub> = R<sub>a</sub>·R<sub>t</sub>/(R<sub>a</sub> − R<sub>t</sub>)',
+  init(){
+    prReset();
+    $('pr_add').addEventListener('click',prAdd);
+    $('pr_list').addEventListener('click',e=>{
+      const x=e.target.closest('.sx'); if(!x) return;
+      const all=document.querySelectorAll('#pr_list .prr');
+      if(all.length<=1){ const i=all[0].querySelector('input'); i.value=''; forget(i); i.classList.remove('dirty'); }
+      else x.closest('.prr').remove();
+      prNum();
+    });
+  },
+  clear(){ prReset(); },
+  calc(){
+    let did=false, g=0, n=0, k=0;
+    for(const r of document.querySelectorAll('#pr_list .prr')){
+      k++; const id='pr_r_'+r.dataset.pid; if(!has(id)) continue;
+      const v=getSI(id); if(!(v>0)) return `R${k} must be greater than 0.`;
+      g+=1/v; n++;
+    }
+    if(n){ put('pr_eq',1/g); put('pr_g',g*1e3); did=true; } else wipe(['pr_eq','pr_g']);
+    if(has('pr_a')||has('pr_t')){
+      const a=getSI('pr_a'), t=getSI('pr_t');
+      if(!(a>0)) return 'Enter the known resistor Ra.';
+      if(!(t>0)) return 'Enter the target equivalent resistance.';
+      if(t>=a) return 'The target must be smaller than Ra; a parallel resistor can only lower it.';
+      const b=a*t/(a-t), e=e96(b);
+      put('pr_b',b); put('pr_be',e); put('pr_beq',a*e/(a+e)); did=true;
+    } else wipe(['pr_b','pr_be','pr_beq']);
+    return did||'Enter at least one resistor.';
   }});
 
 /* ---------- 9. Cascade ---------- */
@@ -908,6 +1003,57 @@ def('cs',{title:'Cascade Analysis',desc:'Chain gain, noise figure and IP3',cat:'
     let invp=0, anyp=false, gb=1;
     st.forEach(s=>{ if(s.p1!==null){ anyp=true; invp+=gb/10**(s.p1/10); } gb*=10**(s.g/10); });
     if(anyp){ const ip1=10*LOG10(1/invp); put('cs_ip1',ip1); put('cs_op1',ip1+Gdb-1); } else wipe(['cs_ip1','cs_op1']);
+    return true;
+  }});
+
+/* ---------- 9b. PA efficiency ---------- */
+function paSVG(){
+  let s='';
+  s+=L_(18,62,96,62)+`<path d="M96 30 L96 94 L170 62 Z" class="rb"/>`+L_(170,62,258,62);
+  s+=`<path d="M90 56 L96 62 L90 68" class="w"/><path d="M252 56 L258 62 L252 68" class="w"/>`;
+  s+=L_(126,10,126,44)+`<path d="M121 38 L126 44 L131 38" class="w"/>`;
+  [116,131,146].forEach(x=>{ s+=`<path d="M${x} 84 q4 4 0 8 q-4 4 0 8 q4 4 0 8" class="hw"/>`; });
+  s+=T_(56,52,'P<tspan font-size="10" dy="3">in</tspan>')+T_(214,52,'P<tspan font-size="10" dy="3">out</tspan>');
+  s+=T_(134,16,'V<tspan font-size="10" dy="3">DC</tspan><tspan dy="-3"> · I</tspan><tspan font-size="10" dy="3">DC</tspan>','start');
+  s+=T_(160,104,'P<tspan font-size="10" dy="3">diss</tspan>','start','tx hx');
+  return `<svg viewBox="0 0 280 112" class="sv">${s}</svg>`;
+}
+def('pa',{title:'PA Efficiency',desc:'PAE, drain efficiency and dissipated heat',cat:'sys',badge:'PA',
+  body: card('', `<div class="dia">${paSVG()}</div>`
+      + rows(row('<i>P</i><sub>in</sub>','RF input power','pa_pin',{signed:1,unit:'dBm'}),
+             row('<i>P</i><sub>out</sub>','RF output power','pa_pout',{signed:1,unit:'dBm'}))
+      + rows(row('<i>V</i><sub>DC</sub>','Supply voltage','pa_v',{unit:'V'}),
+             row('<i>I</i><sub>DC</sub>','Supply current','pa_i',{dd:'cur',def:0}))
+      + rows(row('θ<sub>jc</sub>','Thermal resistance, junction to case','pa_rth',{unit:'°C/W',sub:'optional'}),
+             row('<i>T</i><sub>c</sub>','Case temperature','pa_tc',{signed:1,unit:'°C',sub:'optional'})))
+    + card('Results', rows(
+      row('<i>G</i>','Gain','pa_g',{out:1,unit:'dB'}),
+      row('<i>P</i><sub>DC</sub>','DC power','pa_pdc',{out:1,unit:'W'}),
+      row('<i>P</i><sub>out</sub>','RF output power','pa_poutw',{out:1,unit:'W'}))
+      + rows(
+      row('PAE','Power added efficiency','pa_pae',{out:1,unit:'%'}),
+      row('η<sub>D</sub>','Drain efficiency','pa_eta',{out:1,unit:'%'}))
+      + rows(
+      row('<i>P</i><sub>diss</sub>','Heat dissipated','pa_diss',{out:1,unit:'W'}),
+      row('<i>T</i><sub>j</sub>','Junction temperature','pa_tj',{out:1,unit:'°C'}))),
+  fx:'P<sub>DC</sub> = V<sub>DC</sub>·I<sub>DC</sub><br>PAE = (P<sub>out</sub> − P<sub>in</sub>)/P<sub>DC</sub><br>η<sub>D</sub> = P<sub>out</sub>/P<sub>DC</sub><br>P<sub>diss</sub> = P<sub>DC</sub> + P<sub>in</sub> − P<sub>out</sub><br>T<sub>j</sub> = T<sub>c</sub> + θ<sub>jc</sub>·P<sub>diss</sub>',
+  calc(){
+    const pin=num('pa_pin'), pout=num('pa_pout');
+    if(!isFinite(pin)) return 'Enter the RF input power.';
+    if(!isFinite(pout)) return 'Enter the RF output power.';
+    const V=num('pa_v'); if(!(V>0)) return 'Supply voltage must be greater than 0.';
+    const I=getSI('pa_i'); if(!(I>0)) return 'Supply current must be greater than 0.';
+    const Pin=1e-3*10**(pin/10), Pout=1e-3*10**(pout/10), Pdc=V*I;
+    if(Pout>Pdc+Pin) return 'Output power is larger than DC plus input power. Check the values.';
+    const diss=Pdc+Pin-Pout;
+    put('pa_g',pout-pin); put('pa_pdc',Pdc); put('pa_poutw',Pout);
+    put('pa_pae',100*(Pout-Pin)/Pdc); put('pa_eta',100*Pout/Pdc); put('pa_diss',diss);
+    if(has('pa_rth')||has('pa_tc')){
+      const R=num('pa_rth'), Tc=num('pa_tc');
+      if(!(R>=0)) return 'Enter the thermal resistance for the junction temperature.';
+      if(!isFinite(Tc)) return 'Enter the case temperature for the junction temperature.';
+      put('pa_tj',Tc+R*diss);
+    } else wipe(['pa_tj']);
     return true;
   }});
 
@@ -1101,7 +1247,7 @@ function build(){
 
 /* ================= dropdowns ================= */
 function initDD(el){
-  const id=el.dataset.for, set=UNITS[el.dataset.units], idx=+el.dataset.def||0;
+  const id=el.dataset.for, set=UNITS[el.dataset.units], idx=el.dataset.units==='res'?1:(+el.dataset.def||0);
   UIDX[id]=idx; DDEL[id]=el;
   el.innerHTML=`<button type="button" class="ddb"><span>${set[idx][0]}</span><i>▾</i></button><div class="ddm">${set.map((u,i)=>`<div data-i="${i}"${i===idx?' class="on"':''}>${u[0]}</div>`).join('')}</div>`;
   el.querySelector('.ddb').addEventListener('click',e=>{ e.stopPropagation(); const o=el.classList.contains('open'); closeDD(); if(!o) el.classList.add('open'); });
