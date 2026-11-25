@@ -52,6 +52,7 @@ button{font-family:inherit}
 .item .t{font-size:15px;font-weight:600}
 .item .d{font-size:12.5px;color:var(--muted);margin-top:2px}
 .item .chev{margin-left:auto;color:var(--faint);font-size:22px;line-height:1}
+.legal{max-width:520px;margin:28px auto 0;padding:0 8px;text-align:center;font-size:11.5px;line-height:1.55;color:var(--faint)}
 .foot{text-align:center;font-size:12px;color:var(--faint);margin-top:26px}
 
 /* ---------- calculator chrome ---------- */
@@ -1227,6 +1228,7 @@ function tracePath(){
   }
   return d;
 }
+const LEGAL='© 2026 TunaBoy. All rights reserved. Free to use; copying, modifying or redistributing the code is not permitted. Results are for reference only and come with no warranty.';
 function build(){
   let h=`<section class="screen active" id="home"><header class="hero"><svg class="trace" viewBox="0 0 600 120" preserveAspectRatio="none" aria-hidden="true"><path d="${tracePath()}"/></svg><div class="hero-in"><h1>RF/Microwave Calculator</h1><p>Designed By TunaBoy</p></div></header><div class="home">`;
   CATS.forEach(([k,label,b])=>{
@@ -1236,9 +1238,9 @@ function build(){
     });
     h+='</div></section>';
   });
-  h+=`<p class="foot">Works offline once installed</p></div></section>`;
+  h+=`<p class="foot">Works offline once installed</p><p class="legal">${LEGAL}</p></div></section>`;
   Object.entries(SC).forEach(([id,s])=>{
-    h+=`<section class="screen" id="${id}"><header class="bar"><button class="back" type="button" aria-label="Back">‹</button><h1>${s.title}</h1></header><div class="wrap">${s.body}<div class="err" id="err_${id}" role="alert"></div><div class="actions"><button class="btn primary" data-act="calc" type="button">Calculate</button><button class="btn" data-act="clear" type="button">Clear</button></div><p class="hint k">Press <kbd>Enter</kbd> to calculate. <kbd>↑</kbd> <kbd>↓</kbd> step the value, hold <kbd>Shift</kbd> for ×10.</p><p class="hint t">Tap ✓ on the keyboard or Calculate. Use ± for negative values.</p><div class="fx">${s.fx}</div>${s.after||''}</div></section>`;
+    h+=`<section class="screen" id="${id}"><header class="bar"><button class="back" type="button" aria-label="Back">‹</button><h1>${s.title}</h1></header><div class="wrap">${s.body}<div class="err" id="err_${id}" role="alert"></div><div class="actions"><button class="btn primary" data-act="calc" type="button">Calculate</button><button class="btn" data-act="clear" type="button">Clear</button></div><p class="hint k">Press <kbd>Enter</kbd> to calculate. <kbd>↑</kbd> <kbd>↓</kbd> step the value, hold <kbd>Shift</kbd> for ×10.</p><p class="hint t">Tap ✓ on the keyboard or Calculate. Use ± for negative values.</p><div class="fx">${s.fx}</div>${s.after||''}<p class="legal">${LEGAL}</p></div></section>`;
   });
   $('app').innerHTML=h;
   document.querySelectorAll('.dd').forEach(initDD);
